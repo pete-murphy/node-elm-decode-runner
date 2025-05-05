@@ -47,8 +47,11 @@ writeFileSync(elmFilePath, elmSource);
 
 compileToString([elmFilePath], { output: "ignored.js" })
   .then((jsCode) => {
-    const Module = { exports: {} };
+    const _warn = console.warn;
+    console.warn = () => {};
     eval(jsCode);
+    console.warn = _warn;
+
     const app = this.Elm.DecodeRunner.init();
 
     app.ports.sendToJS.subscribe((msg) => {
