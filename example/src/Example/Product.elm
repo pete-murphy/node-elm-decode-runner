@@ -1,4 +1,4 @@
-module Example.Product exposing (Product, decoder)
+module Example.Product exposing (Product)
 
 import Json.Decode exposing (Decoder, int, map2, string)
 

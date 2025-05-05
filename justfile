@@ -5,6 +5,9 @@ default:
 
 [working-directory: 'example']
 run-example:
-    echo '{"name":"Alice","age":30}' | node ../cli.js Example.User.decoder
+    echo '{"name":"Alice","age":30}' | npx elm-decode Example.User.decoder
 
+[working-directory: 'example']
+run-example-no-export:
+    echo '{"id":1,"name":"foo"}' | npx elm-decode Example.Product.decoder
     
