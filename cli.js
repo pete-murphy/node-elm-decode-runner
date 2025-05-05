@@ -58,7 +58,7 @@ const patchModule = (moduleName) => {
 
   for (const srcDir of srcDirs) {
     // Check if the source directory exists
-    const absPath = resolve(srcDir, "src", relDir, fileName);
+    const absPath = resolve(srcDir, relDir, fileName);
     const backupPath = absPath + ".bak";
 
     if (!existsSync(absPath)) continue;
