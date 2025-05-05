@@ -10,7 +10,9 @@
     "start": "node cli.js"
   },
   "dependencies": {
-    "elm": "^0.19.1-5",
     "node-elm-compiler": "^5.0.4"
+  },
+  "devDependencies": {
+    "elm": "^0.19.1-6"
   }
 }
