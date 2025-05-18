@@ -26,25 +26,28 @@
     }: {
       default = pkgs.mkShell {
         buildInputs = [
-            # Elm
-            elm-pkgs.elmPackages.elm
-            elm-pkgs.elmPackages.elm-format
-            elm-pkgs.elmPackages.elm-test-rs
-            elm-pkgs.elmPackages.elm-json
-            elm-pkgs.elmPackages.elm-language-server
-            elm-pkgs.elm2nix
+          # Elm
+          elm-pkgs.elmPackages.elm
+          elm-pkgs.elmPackages.elm-format
+          elm-pkgs.elmPackages.elm-test-rs
+          elm-pkgs.elmPackages.elm-json
+          elm-pkgs.elmPackages.elm-language-server
+          elm-pkgs.elm2nix
 
-            # JS
-            pkgs.nodejs_22
-            pkgs.typescript
+          # JS
+          pkgs.nodejs_22
+          pkgs.typescript
 
-            # Nix
-            pkgs.alejandra
+          # Nix
+          pkgs.alejandra
 
-            # Scripts
-            pkgs.just
-            pkgs.bun
-          ];
+          # Scripts
+          pkgs.just
+          pkgs.bun
+
+          # Testing
+          pkgs.bats
+        ];
         shellHook = ''
           npm install
           export PATH="$PWD/node_modules/.bin/:$PATH"
