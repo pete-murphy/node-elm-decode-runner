@@ -14,7 +14,7 @@ const { compileToString } = require("node-elm-compiler");
 const [, , decoderArg] = process.argv;
 
 if (!decoderArg) {
-  console.error("Usage: elm-decode <Module.Name.decoder>");
+  console.error("Usage: elm-decode-runner <Module.Name.decoder>");
   process.exit(1);
 }
 

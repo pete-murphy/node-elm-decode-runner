@@ -1,10 +1,10 @@
 {
-  "name": "elm-decode-cli",
-  "version": "1.4.1",
+  "name": "elm-decode-runner",
+  "version": "0.1.0",
   "description": "CLI tool to run an Elm decoder on stdin JSON",
   "main": "./cli.js",
   "bin": {
-    "elm-decode": "./cli.js"
+    "elm-decode-runner": "cli.js"
   },
   "scripts": {
     "test": "BATS_TEST_DIRNAME=$(pwd)/tests ./tests/decoding.bats"
@@ -23,7 +23,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "github:your-username/elm-decode-cli"
+    "url": "git+https://github.com/your-username/elm-decode-cli.git"
   },
   "author": "",
   "license": "ISC",

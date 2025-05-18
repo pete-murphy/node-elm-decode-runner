@@ -1,17 +1,17 @@
-# elm-decode-cli
+# elm-decode-runner
 
 CLI tool to run an Elm decoder on JSON input from stdin.
 
 ## Installation
 
 ```
-npm install -g elm-decode-cli
+npm install -g elm-decode-runner
 ```
 
 ## Usage
 
 ```
-echo '{"name":"Alice","age":30}' | elm-decode Example.User.decoder
+echo '{"name":"Alice","age":30}' | elm-decode-runner Example.User.decoder
 ```
 
 This tool makes it easy to test Elm decoders from the command line by:
@@ -27,7 +27,7 @@ This tool makes it easy to test Elm decoders from the command line by:
 
 ### Arguments
 
-`elm-decode <Module.Path.decoderName>`
+`elm-decode-runner <Module.Path.decoderName>`
 
 Where:
 
@@ -38,10 +38,10 @@ Where:
 
 ```bash
 # Using a specific decoder
-echo '{"name":"Alice","age":30}' | elm-decode Example.User.decoder
+echo '{"name":"Alice","age":30}' | elm-decode-runner Example.User.decoder
 
 # Piping from a file
-cat data.json | elm-decode Example.Product.decoder
+cat data.json | elm-decode-runner Example.Product.decoder
 ```
 
 ## License
