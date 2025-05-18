@@ -90,7 +90,7 @@ main =
 `;
 
 // Try to patch the original module (if decoder isn't exported)
-const patchModule = (moduleName) => {
+const patchModule = (moduleName, decoderName) => {
   const elmJson = JSON.parse(readFileSync("elm.json", "utf8"));
   const srcDirs = elmJson["source-directories"] || ["src"];
   const modulePathParts = moduleName.split(".");
@@ -113,6 +113,12 @@ const patchModule = (moduleName) => {
       exposingPattern.exec(content)[1].includes("..");
 
     if (alreadyExposingAll) return null; // no patch needed
+
+    const alreadyExposingDecoder =
+      exposingPattern.test(content) &&
+      exposingPattern.exec(content)[1].includes(decoderName);
+
+    if (alreadyExposingDecoder) return null;
 
     copyFileSync(absPath, backupPath);
     const patched = content.replace(
