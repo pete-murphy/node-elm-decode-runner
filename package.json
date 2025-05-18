@@ -6,10 +6,28 @@
   "bin": {
     "elm-decode": "./cli.js"
   },
+  "scripts": {
+    "test": "BATS_TEST_DIRNAME=$(pwd)/tests ./tests/decoding.bats"
+  },
   "dependencies": {
     "node-elm-compiler": "^5.0.4"
   },
   "devDependencies": {
     "elm": "^0.19.1-6"
+  },
+  "keywords": [
+    "elm",
+    "decoder",
+    "cli",
+    "json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "github:your-username/elm-decode-cli"
+  },
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=10.0.0"
   }
 }

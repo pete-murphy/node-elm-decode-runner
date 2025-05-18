@@ -9,12 +9,38 @@ const {
 const { tmpdir } = require("os");
 const { join, resolve } = require("path");
 const { compileToString } = require("node-elm-compiler");
-const elmJson = require("./elm.json");
 
+// Get the command line arguments
 const [, , decoderArg] = process.argv;
 
 if (!decoderArg) {
-  console.error("Usage: elm-decode-cli <Module.Name.decoder>");
+  console.error("Usage: elm-decode <Module.Name.decoder>");
+  process.exit(1);
+}
+
+// Check if elm.json exists in the current directory
+if (!existsSync("elm.json")) {
+  console.error("elm.json not found in current directory");
+  process.exit(1);
+}
+
+// Check if elm.json is valid JSON
+try {
+  const elmJsonContent = readFileSync("elm.json", "utf8");
+  try {
+    const elmJson = JSON.parse(elmJsonContent);
+
+    // Basic validation of elm.json structure
+    if (!elmJson["source-directories"] || !elmJson["dependencies"]) {
+      console.error("invalid elm.json format");
+      process.exit(1);
+    }
+  } catch (err) {
+    console.error("invalid elm.json");
+    process.exit(1);
+  }
+} catch (err) {
+  console.error("Error reading elm.json:", err.message);
   process.exit(1);
 }
 
@@ -44,13 +70,14 @@ main =
                     ( (), sendToJS (Json.Encode.string ("Success: " ++ Debug.toString value)) )
 
                 Err err ->
-                    ( (), sendToJS (Json.Encode.string ("Error: " ++ Debug.toString err)) )
+                    ( (), sendToJS (Json.Encode.string ("Error: failed to decode: " ++ Debug.toString err)) )
         , subscriptions = \\_ -> moduleInput (\\json -> json)
         }
 `;
 
 // Try to patch the original module (if decoder isn't exported)
 const patchModule = (moduleName) => {
+  const elmJson = JSON.parse(readFileSync("elm.json", "utf8"));
   const srcDirs = elmJson["source-directories"] || ["src"];
   const modulePathParts = moduleName.split(".");
   const fileName = modulePathParts.pop() + ".elm";
@@ -86,7 +113,8 @@ const patchModule = (moduleName) => {
     };
   }
 
-  return null;
+  console.error(`decoder not found: ${decoderName} in module ${modulePath}`);
+  process.exit(1);
 };
 
 const restore = patchModule(modulePath);
@@ -108,7 +136,7 @@ compileToString([elmFilePath], { output: "ignored.js" })
 
     app.ports.sendToJS.subscribe((msg) => {
       console.log(msg);
-      process.exit(0);
+      process.exit(msg.includes("Error") ? 1 : 0);
     });
 
     let input = "";
@@ -119,7 +147,7 @@ compileToString([elmFilePath], { output: "ignored.js" })
         const json = JSON.parse(input);
         app.ports.moduleInput.send(json);
       } catch (err) {
-        console.error("Invalid JSON input");
+        console.error("JSON syntax error:", err.message);
         process.exit(1);
       }
     });
