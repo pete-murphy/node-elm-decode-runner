@@ -36,12 +36,25 @@ Where:
 
 ## Examples
 
-```bash
-# Using a specific decoder
-echo '{"name":"Alice","age":30}' | elm-decode-runner Example.User.decoder
+### Success case
 
-# Piping from a file
-cat data.json | elm-decode-runner Example.Product.decoder
+```bash
+❯ curl -s https://jsonplaceholder.typicode.com/todos/1 | elm-decode-runner Example.Todo.decoder
+{ completed = False, id = 1, title = "delectus aut autem", userId = 1 }
+```
+
+### Failure case
+
+```bash
+❯ echo '{"name":"Alice","age":30}' | elm-decode-runner Example.User.decoder
+Problem with the given value:
+
+{
+        "name": "Alice",
+        "age": 30
+    }
+
+Expecting an OBJECT with a field named `email`
 ```
 
 ## License
