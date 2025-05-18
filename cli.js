@@ -57,7 +57,7 @@ import Json.Decode exposing (Value)
 import Json.Encode
 ${moduleImport}
 
-port sendToJS : Value -> Cmd msg
+port sendToJs : Value -> Cmd msg
 port moduleInput : (Value -> msg) -> Sub msg
 
 main : Program () () Value
@@ -67,10 +67,24 @@ main =
         , update = \\json _ ->
             case Json.Decode.decodeValue ${decoderName} json of
                 Ok value ->
-                    ( (), sendToJS (Json.Encode.string ("Success: " ++ Debug.toString value)) )
+                    ( ()
+                    , sendToJs
+                        (Json.Encode.object
+                            [ ( "tag", Json.Encode.string "Success" )
+                            , ( "value", Json.Encode.string (Debug.toString value) )
+                            ]
+                        )
+                    )
 
                 Err err ->
-                    ( (), sendToJS (Json.Encode.string ("Error: failed to decode: " ++ Debug.toString err)) )
+                    ( ()
+                    , sendToJs
+                        (Json.Encode.object
+                            [ ( "tag", Json.Encode.string "Error" )
+                            , ( "value", Json.Encode.string (Json.Decode.errorToString err) )
+                            ]
+                        )
+                    )
         , subscriptions = \\_ -> moduleInput (\\json -> json)
         }
 `;
@@ -134,9 +148,15 @@ compileToString([elmFilePath], { output: "ignored.js" })
 
     const app = this.Elm.DecodeRunner.init();
 
-    app.ports.sendToJS.subscribe((msg) => {
-      console.log(msg);
-      process.exit(msg.includes("Error") ? 1 : 0);
+    app.ports.sendToJs.subscribe((msg) => {
+      const { tag, value } = msg;
+      if (tag === "Error") {
+        console.error(value);
+        process.exit(1);
+      } else {
+        console.log(value);
+        process.exit(0);
+      }
     });
 
     let input = "";
