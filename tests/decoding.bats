@@ -68,6 +68,30 @@ teardown_file() {
 }
 
 # ----------------------------
+# Successful Decoding - Unexported decoder
+# ----------------------------
+@test "decodes valid JSON with unexported Decoders.fooDecoder" {
+  echo "# DEBUG: Before cd - current directory: $(pwd)"
+  echo "# DEBUG: TEST_RUN_DIR=$TEST_RUN_DIR"
+  echo "# DEBUG: Contents of TEST_RUN_DIR:"
+  ls -la "$TEST_RUN_DIR"
+  
+  cd "$TEST_RUN_DIR/elm_project_valid_not_exported"
+  echo "# DEBUG: After cd - current directory: $(pwd)"
+  echo "# DEBUG: Contents of current directory:"
+  ls -la
+
+  run bash -c "cat ../json_inputs/valid_for_foo.json | node $CLI_PATH Decoders.fooDecoder"
+  echo "# DEBUG: Test output: $output"
+  echo "# DEBUG: Test status: $status"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "Success" ]]
+}
+
+
+
+# ----------------------------
 # Failed Decoding – Incorrect JSON structure
 # ----------------------------
 @test "fails when JSON structure is invalid for decoder" {
