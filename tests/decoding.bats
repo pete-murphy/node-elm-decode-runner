@@ -64,7 +64,8 @@ teardown_file() {
   echo "# DEBUG: Test status: $status"
 
   [ "$status" -eq 0 ]
-  [[ "$output" =~ "Success" ]]
+  [[ "$output" =~ "name" ]]
+  [[ "$output" =~ "age" ]]
 }
 
 # ----------------------------
@@ -86,7 +87,8 @@ teardown_file() {
   echo "# DEBUG: Test status: $status"
 
   [ "$status" -eq 0 ]
-  [[ "$output" =~ "Success" ]]
+  [[ "$output" =~ "name" ]]
+  [[ "$output" =~ "age" ]]
 }
 
 
@@ -98,9 +100,11 @@ teardown_file() {
   cd "$TEST_RUN_DIR/elm_project_valid"
 
   run bash -c "cat ../json_inputs/invalid_structure_for_foo.json | node $CLI_PATH Decoders.fooDecoder"
+  echo "# DEBUG: Test output: $output"
+  echo "# DEBUG: Test status: $status"
 
   [ "$status" -ne 0 ]
-  [[ "$output" =~ "failed" ]]
+  [[ "$output" =~ "Problem with the given value" ]]
 }
 
 # ----------------------------
@@ -110,6 +114,8 @@ teardown_file() {
   cd "$TEST_RUN_DIR/elm_project_valid"
 
   run bash -c "cat ../json_inputs/malformed.json | node $CLI_PATH Decoders.fooDecoder"
+  echo "# DEBUG: Test output: $output"
+  echo "# DEBUG: Test status: $status"
 
   [ "$status" -ne 0 ]
   [[ "$output" =~ "JSON syntax error" ]]
@@ -122,6 +128,8 @@ teardown_file() {
   cd "$TEST_RUN_DIR/elm_project_valid"
 
   run bash -c "cat ../json_inputs/valid_for_foo.json | node $CLI_PATH NonExistent.decoder"
+  echo "# DEBUG: Test output: $output"
+  echo "# DEBUG: Test status: $status"
 
   [ "$status" -ne 0 ]
   [[ "$output" =~ "decoder not found" ]]
@@ -134,6 +142,8 @@ teardown_file() {
   cd "$TEST_RUN_DIR/not_an_elm_project"
 
   run bash -c "echo '{}' | node $CLI_PATH Decoders.fooDecoder"
+  echo "# DEBUG: Test output: $output"
+  echo "# DEBUG: Test status: $status"
 
   [ "$status" -ne 0 ]
   [[ "$output" =~ "elm.json not found" ]]
@@ -146,6 +156,8 @@ teardown_file() {
   cd "$TEST_RUN_DIR/elm_project_bad_elm_json"
 
   run bash -c "echo '{}' | node $CLI_PATH Decoders.fooDecoder"
+  echo "# DEBUG: Test output: $output"
+  echo "# DEBUG: Test status: $status"
 
   [ "$status" -ne 0 ]
   [[ "$output" =~ "invalid elm.json" ]]
