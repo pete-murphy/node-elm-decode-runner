@@ -231,6 +231,39 @@ teardown_file() {
   [[ "$output" =~ "Order.orderDecoder" ]]      # : J.Decoder Order
 }
 
+@test "interactive discovery with mock fzf" {
+  cd "$TEST_RUN_DIR/elm_project_decoder_discovery"
+
+  # Create a mock fzf that selects the first decoder
+  mkdir -p "$TEST_RUN_DIR/mock-fzf"
+  cat > "$TEST_RUN_DIR/mock-fzf/fzf" << 'EOF'
+#!/bin/bash  
+head -1
+EOF
+  chmod +x "$TEST_RUN_DIR/mock-fzf/fzf"
+
+  # Test interactive mode with JSON input
+  run bash -c "echo '{\"name\":\"test\",\"count\":5}' | PATH=\"$TEST_RUN_DIR/mock-fzf:\$PATH\" node \"$CLI_PATH\" --discover"
+  echo "# DEBUG: Test output: $output"
+  echo "# DEBUG: Test status: $status"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "count = 5" ]]
+  [[ "$output" =~ "name = \"test\"" ]]
+}
+
+@test "interactive discovery without fzf shows fallback" {
+  cd "$TEST_RUN_DIR/elm_project_decoder_discovery"
+
+  # Test with fzf not available
+  run bash -c "echo '{\"name\":\"test\",\"count\":5}' | PATH=\"/nonexistent:\$PATH\" timeout 5 node \"$CLI_PATH\" --discover 2>&1"
+  echo "# DEBUG: Test output: $output" 
+  echo "# DEBUG: Test status: $status"
+
+  [ "$status" -ne 0 ]
+  [[ "$output" =~ "fzf not found" ]] || [[ "$output" =~ "Available decoders" ]]
+}
+
 @test "returns empty list when no decoders found" {
   cd "$TEST_RUN_DIR/elm_project_no_decoder"
 
