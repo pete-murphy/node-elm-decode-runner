@@ -4,8 +4,18 @@ CLI tool to run an Elm decoder on JSON input from stdin.
 
 ## Installation
 
+### Using npm
+
 ```
 npm install -g elm-decode-runner
+```
+
+### Using Nix
+
+You can run `elm-decode-runner` directly from GitHub without installing:
+
+```bash
+echo '{"name":"Alice","age":30}' | nix run github:pete-murphy/node-elm-decode-runner -- Example.User.decoder
 ```
 
 ## Usage

@@ -19,6 +19,45 @@
           inherit system;
         });
   in {
+    packages = forEachSupportedSystem ({
+      pkgs,
+      elm-pkgs,
+      system,
+    }: {
+      default = pkgs.buildNpmPackage {
+        pname = "elm-decode-runner";
+        version = "0.1.2";
+
+        src = ./.;
+
+        npmDepsHash = "sha256-UB0Q4l7tpV4o0WPhAFL9ktCKTSa2NO+Gz53Js7fXUq0=";
+
+        # Don't run npm build since this package doesn't have/need a build script
+        dontNpmBuild = true;
+
+        nativeBuildInputs = with pkgs; [
+          # Need elm compiler at build time since node-elm-compiler uses it
+          elm-pkgs.elmPackages.elm
+          # Need makeWrapper for the postInstall script
+          makeWrapper
+        ];
+
+        # Make elm available at runtime since the tool compiles Elm code dynamically
+        postInstall = ''
+          wrapProgram $out/bin/elm-decode-runner \
+            --prefix PATH : ${pkgs.lib.makeBinPath [elm-pkgs.elmPackages.elm]}
+        '';
+
+        meta = with pkgs.lib; {
+          description = "CLI tool to run an Elm decoder on stdin JSON";
+          homepage = "https://github.com/pete-murphy/node-elm-decode-runner";
+          license = licenses.isc;
+          maintainers = [];
+          mainProgram = "elm-decode-runner";
+        };
+      };
+    });
+
     devShells = forEachSupportedSystem ({
       pkgs,
       elm-pkgs,
