@@ -26,11 +26,11 @@
     }: {
       default = pkgs.buildNpmPackage {
         pname = "elm-decode-runner";
-        version = "0.1.2";
+        version = "0.2.0";
 
         src = ./.;
 
-        npmDepsHash = "sha256-UB0Q4l7tpV4o0WPhAFL9ktCKTSa2NO+Gz53Js7fXUq0=";
+        npmDepsHash = "sha256-k2hROrbiv+sXiM7tFc6dICgx9PXlcQFgX/TaiqF/noc=";
 
         # Don't run npm build since this package doesn't have/need a build script
         dontNpmBuild = true;
