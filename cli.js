@@ -210,7 +210,8 @@ function patchModule(moduleName, decoderName) {
 
     const content = readFileSync(absPath, "utf8");
     const exposingPattern = new RegExp(
-      `module\\s+${moduleName}\\s+exposing\\s+\\(([^)]*)\\)`
+      `module\\s+${moduleName}\\s+exposing\\s*\\(([^)]*)\\)`,
+      "s"
     );
     const alreadyExposingAll =
       exposingPattern.test(content) &&
