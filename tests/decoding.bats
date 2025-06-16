@@ -182,4 +182,73 @@ teardown_file() {
 
   [ "$status" -ne 0 ]
   [[ "$output" =~ "invalid elm.json" ]]
+}
+
+# ----------------------------
+# Decoder Discovery
+# ----------------------------
+@test "discovers decoders with --discover flag" {
+  cd "$TEST_RUN_DIR/elm_project_decoder_discovery"
+
+  run node "$CLI_PATH" --discover
+  echo "# DEBUG: Test output: $output"
+  echo "# DEBUG: Test status: $status"
+
+  [ "$status" -eq 0 ]
+  
+  # Should find all expected decoders
+  [[ "$output" =~ "User.userDecoder" ]]
+  [[ "$output" =~ "User.adminDecoder" ]]
+  [[ "$output" =~ "Product.productDecoder" ]]
+  [[ "$output" =~ "Product.listDecoder" ]]
+  [[ "$output" =~ "Order.orderDecoder" ]]
+  [[ "$output" =~ "Order.statusDecoder" ]]
+  [[ "$output" =~ "Utils.Helpers.configDecoder" ]]
+  [[ "$output" =~ "Utils.Helpers.settingsDecoder" ]]
+  [[ "$output" =~ "Mixed.itemDecoder" ]]
+  [[ "$output" =~ "Mixed.nameDecoder" ]]
+  
+  # Should NOT find non-decoders
+  [[ ! "$output" =~ "User.userToString" ]]
+  [[ ! "$output" =~ "Mixed.itemEncoder" ]]
+  [[ ! "$output" =~ "Mixed.customDecoder" ]]
+  [[ ! "$output" =~ "Mixed.itemToString" ]]
+}
+
+@test "discovers decoders with different import styles" {
+  cd "$TEST_RUN_DIR/elm_project_decoder_discovery"
+
+  run node "$CLI_PATH" --discover
+  echo "# DEBUG: Test output: $output"
+  echo "# DEBUG: Test status: $status"
+
+  [ "$status" -eq 0 ]
+  
+  # Test that we find decoders with different qualifications
+  [[ "$output" =~ "User.userDecoder" ]]        # : Decoder User
+  [[ "$output" =~ "User.adminDecoder" ]]       # : Json.Decode.Decoder User
+  [[ "$output" =~ "Product.productDecoder" ]]  # : Decode.Decoder Product
+  [[ "$output" =~ "Order.orderDecoder" ]]      # : J.Decoder Order
+}
+
+@test "returns empty list when no decoders found" {
+  cd "$TEST_RUN_DIR/elm_project_no_decoder"
+
+  run node "$CLI_PATH" --discover
+  echo "# DEBUG: Test output: $output"
+  echo "# DEBUG: Test status: $status"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "fails with --discover when not in Elm project" {
+  cd "$TEST_RUN_DIR/not_an_elm_project"
+
+  run node "$CLI_PATH" --discover
+  echo "# DEBUG: Test output: $output"
+  echo "# DEBUG: Test status: $status"
+
+  [ "$status" -ne 0 ]
+  [[ "$output" =~ "elm.json not found" ]]
 } 

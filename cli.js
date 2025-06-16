@@ -5,6 +5,8 @@ const {
   copyFileSync,
   unlinkSync,
   existsSync,
+  readdirSync,
+  statSync,
 } = require("fs");
 const { tmpdir } = require("os");
 const { join, resolve } = require("path");
@@ -13,9 +15,139 @@ const { compileToString } = require("node-elm-compiler");
 // Get the command line arguments
 const [, , decoderArg] = process.argv;
 
+// Handle --discover flag
+if (decoderArg === "--discover") {
+  discoverDecoders();
+  return;
+}
+
 if (!decoderArg) {
-  console.error("Usage: elm-decode-runner <Module.Name.decoder>");
+  console.error(
+    "Usage: elm-decode-runner <Module.Name.decoder> | elm-decode-runner --discover"
+  );
   process.exit(1);
+}
+
+// Function to discover decoders in the project
+function discoverDecoders() {
+  // Check if elm.json exists in the current directory
+  if (!existsSync("elm.json")) {
+    console.error("elm.json not found in current directory");
+    process.exit(1);
+  }
+
+  let elmJson;
+  try {
+    const elmJsonContent = readFileSync("elm.json", "utf8");
+    elmJson = JSON.parse(elmJsonContent);
+
+    // Basic validation of elm.json structure
+    if (!elmJson["source-directories"] || !elmJson["dependencies"]) {
+      console.error("invalid elm.json format");
+      process.exit(1);
+    }
+  } catch (err) {
+    console.error("invalid elm.json");
+    process.exit(1);
+  }
+
+  const srcDirs = elmJson["source-directories"] || ["src"];
+  const decoders = [];
+
+  for (const srcDir of srcDirs) {
+    if (existsSync(srcDir)) {
+      findDecodersInDirectory(srcDir, "", decoders);
+    }
+  }
+
+  // Sort decoders alphabetically
+  decoders.sort();
+
+  // Output each decoder on its own line
+  decoders.forEach((decoder) => console.log(decoder));
+}
+
+// Recursively find decoders in a directory
+function findDecodersInDirectory(dirPath, modulePrefix, decoders) {
+  const entries = readdirSync(dirPath);
+
+  for (const entry of entries) {
+    const fullPath = join(dirPath, entry);
+    const stat = statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      // Recursively search subdirectories
+      const newModulePrefix = modulePrefix ? `${modulePrefix}.${entry}` : entry;
+      findDecodersInDirectory(fullPath, newModulePrefix, decoders);
+    } else if (entry.endsWith(".elm")) {
+      // Process Elm files
+      const moduleName = entry.slice(0, -4); // Remove .elm extension
+      const fullModuleName = modulePrefix
+        ? `${modulePrefix}.${moduleName}`
+        : moduleName;
+
+      try {
+        const content = readFileSync(fullPath, "utf8");
+        const foundDecoders = extractDecodersFromContent(
+          content,
+          fullModuleName
+        );
+        decoders.push(...foundDecoders);
+      } catch (err) {
+        // Skip files that can't be read
+        continue;
+      }
+    }
+  }
+}
+
+// Extract decoder declarations from Elm file content
+function extractDecodersFromContent(content, moduleName) {
+  const decoders = [];
+
+  // Single regex pattern to match all decoder type signatures
+  // Matches patterns like:
+  // - name : Decoder Type
+  // - name : Json.Decode.Decoder Type
+  // - name : Decode.Decoder Type
+  // - name : J.Decoder Type
+  // - name   :   Decoder   Type (with various spacing)
+
+  const decoderPattern =
+    /^([a-zA-Z][a-zA-Z0-9_]*)\s*:\s*(?:([a-zA-Z][a-zA-Z0-9_.]*)\.)?(Decoder)\s+/gm;
+
+  let match;
+  while ((match = decoderPattern.exec(content)) !== null) {
+    const decoderName = match[1];
+    const qualification = match[2] || "";
+    const decoderKeyword = match[3];
+
+    // Filter out function types (those with -> in them)
+    // We need to check the rest of the line to see if there's an arrow
+    const lineStart = match.index;
+    const lineEnd = content.indexOf("\n", lineStart);
+    const fullLine = content.slice(
+      lineStart,
+      lineEnd === -1 ? content.length : lineEnd
+    );
+
+    // Skip if this is a function type (contains ->)
+    if (fullLine.includes("->")) {
+      continue;
+    }
+
+    // Check if this looks like a JSON decoder type
+    // Accept patterns like "Decoder", "Json.Decode.Decoder", "Decode.Decoder", "J.Decoder" etc.
+    // Skip other types like "Bytes.Decoder", "TsJson.Decoder" unless they're common JSON decoder aliases
+    if (
+      !qualification ||
+      qualification.match(/^(Json\.Decode|Decode|J|JD|JsonDecode)$/)
+    ) {
+      decoders.push(`${moduleName}.${decoderName}`);
+    }
+  }
+
+  return decoders;
 }
 
 // Check if elm.json exists in the current directory
