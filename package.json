@@ -1,6 +1,6 @@
 {
   "name": "elm-decode-runner",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "CLI tool to run an Elm decoder on stdin JSON",
   "main": "./cli.js",
   "bin": {
