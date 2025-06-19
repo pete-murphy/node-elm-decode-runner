@@ -92,6 +92,9 @@ function discoverAndRunInteractive() {
   let inputJson = "";
   process.stdin.setEncoding("utf8");
 
+  // Resume stdin immediately after setting encoding to avoid race conditions
+  process.stdin.resume();
+
   process.stdin.on("data", (chunk) => {
     inputJson += chunk;
   });
@@ -118,8 +121,13 @@ function discoverAndRunInteractive() {
       stdio: ["pipe", "pipe", "inherit"],
     });
 
+    let fzfResponded = false;
+
     // Handle fzf not being available
     fzf.on("error", (err) => {
+      if (fzfResponded) return;
+      fzfResponded = true;
+
       if (err.code === "ENOENT") {
         console.error(
           "fzf not found. Please install fzf to use interactive mode."
@@ -143,6 +151,9 @@ function discoverAndRunInteractive() {
     });
 
     fzf.on("close", (code) => {
+      if (fzfResponded) return;
+      fzfResponded = true;
+
       if (code !== 0) {
         console.error("Selection cancelled");
         process.exit(1);
@@ -158,8 +169,6 @@ function discoverAndRunInteractive() {
       runDecoderOnJson(selectedDecoder, inputJson);
     });
   });
-
-  process.stdin.resume();
 }
 
 // Helper function to discover decoders without outputting them
