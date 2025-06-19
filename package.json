@@ -6,9 +6,6 @@
   "bin": {
     "elm-decode-runner": "cli.js"
   },
-  "scripts": {
-    "test": "BATS_TEST_DIRNAME=$(pwd)/tests ./tests/decoding.bats"
-  },
   "dependencies": {
     "node-elm-compiler": "^5.0.4"
   },
