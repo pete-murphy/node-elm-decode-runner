@@ -29,12 +29,31 @@ if (decoderArg === "--discover") {
   return;
 }
 
+// Handle --try-all flag
+if (decoderArg === "--try-all") {
+  // Check if we have stdin (JSON to decode)
+  if (process.stdin.isTTY) {
+    console.error("--try-all requires JSON input via stdin");
+    console.error(
+      'Usage: echo \'{"json":"data"}\' | elm-decode-runner --try-all'
+    );
+    process.exit(1);
+  } else {
+    // Piped input - try all decoders
+    tryAllDecoders();
+  }
+  return;
+}
+
 if (!decoderArg) {
   console.error("Usage:");
   console.error("  elm-decode-runner <Module.Name.decoder>");
   console.error("  elm-decode-runner --discover");
   console.error(
     '  echo \'{"json":"data"}\' | elm-decode-runner --discover  # Interactive mode'
+  );
+  console.error(
+    '  echo \'{"json":"data"}\' | elm-decode-runner --try-all  # Try all decoders'
   );
   process.exit(1);
 }
@@ -200,6 +219,220 @@ function discoverDecodersForInteractive() {
   // Sort decoders alphabetically
   decoders.sort();
   return decoders;
+}
+
+// Function to try all discovered decoders
+function tryAllDecoders() {
+  // Check if elm.json exists in the current directory
+  if (!existsSync("elm.json")) {
+    console.error("elm.json not found in current directory");
+    process.exit(1);
+  }
+
+  // First, read and buffer stdin
+  let inputJson = "";
+  process.stdin.setEncoding("utf8");
+
+  // Resume stdin immediately after setting encoding to avoid race conditions
+  process.stdin.resume();
+
+  process.stdin.on("data", (chunk) => {
+    inputJson += chunk;
+  });
+
+  process.stdin.on("end", () => {
+    // Validate JSON early
+    try {
+      JSON.parse(inputJson);
+    } catch (err) {
+      console.error("JSON syntax error:", err.message);
+      process.exit(1);
+    }
+
+    // Discover available decoders
+    const decoders = discoverDecodersForInteractive();
+
+    if (decoders.length === 0) {
+      console.error("No decoders found in project");
+      process.exit(1);
+    }
+
+    console.log(`Found ${decoders.length} decoders. Trying all...`);
+    console.log("");
+
+    const results = [];
+    let completedCount = 0;
+
+    // Try each decoder
+    decoders.forEach((decoder, index) => {
+      tryDecoderOnJson(decoder, inputJson, (success, result) => {
+        results[index] = { decoder, success, result };
+        completedCount++;
+
+        if (completedCount === decoders.length) {
+          // All decoders have been tried, display results
+          displayTryAllResults(results);
+        }
+      });
+    });
+  });
+}
+
+// Function to try a single decoder and call callback with result
+function tryDecoderOnJson(decoderArg, inputJson, callback) {
+  const [modulePath, decoderName] = (() => {
+    const lastDot = decoderArg.lastIndexOf(".");
+    return [decoderArg.slice(0, lastDot), decoderArg.slice(lastDot + 1)];
+  })();
+
+  const moduleImport = `import ${modulePath} exposing (${decoderName})`;
+  const elmSource = `
+port module DecodeRunner exposing (main)
+
+import Json.Decode exposing (Value)
+import Json.Encode
+${moduleImport}
+
+port sendToJs : Value -> Cmd msg
+port moduleInput : (Value -> msg) -> Sub msg
+
+main : Program () () Value
+main =
+    Platform.worker
+        { init = \\_ -> ( (), Cmd.none )
+        , update = \\json _ ->
+            case Json.Decode.decodeValue ${decoderName} json of
+                Ok value ->
+                    ( ()
+                    , sendToJs
+                        (Json.Encode.object
+                            [ ( "tag", Json.Encode.string "Success" )
+                            , ( "value", Json.Encode.string (Debug.toString value) )
+                            ]
+                        )
+                    )
+
+                Err err ->
+                    ( ()
+                    , sendToJs
+                        (Json.Encode.object
+                            [ ( "tag", Json.Encode.string "Error" )
+                            , ( "value", Json.Encode.string (Json.Decode.errorToString err) )
+                            ]
+                        )
+                    )
+        , subscriptions = \\_ -> moduleInput (\\json -> json)
+        }
+`;
+
+  const restore = patchModule(modulePath, decoderName);
+
+  // Write temporary Elm file and compile
+  const elmFilePath = join(
+    tmpdir(),
+    `DecodeRunner_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.elm`
+  );
+  writeFileSync(elmFilePath, elmSource);
+
+  compileToString([elmFilePath], { output: "ignored.js" })
+    .then((jsCode) => {
+      if (restore) restore(); // clean up patched file
+
+      try {
+        // Create a clean execution context
+        const vm = require("vm");
+        const context = vm.createContext({
+          console: { warn: () => {} }, // suppress warnings
+          require: require,
+          process: process,
+          Buffer: Buffer,
+          setTimeout: setTimeout,
+          clearTimeout: clearTimeout,
+        });
+
+        vm.runInContext(jsCode, context);
+
+        const app = context.Elm.DecodeRunner.init();
+
+        app.ports.sendToJs.subscribe((msg) => {
+          const { tag, value } = msg;
+          callback(tag === "Success", value);
+
+          // Clean up temp file
+          try {
+            unlinkSync(elmFilePath);
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+        });
+
+        try {
+          const json = JSON.parse(inputJson);
+          app.ports.moduleInput.send(json);
+        } catch (err) {
+          callback(false, `JSON syntax error: ${err.message}`);
+
+          // Clean up temp file
+          try {
+            unlinkSync(elmFilePath);
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+        }
+      } catch (err) {
+        callback(false, `Runtime error: ${err.message}`);
+
+        // Clean up temp file
+        try {
+          unlinkSync(elmFilePath);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+    })
+    .catch((err) => {
+      if (restore) restore(); // ensure cleanup even on error
+      callback(false, `Compilation error: ${err.message || err}`);
+
+      // Clean up temp file
+      try {
+        unlinkSync(elmFilePath);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    });
+}
+
+// Function to display results from trying all decoders
+function displayTryAllResults(results) {
+  const successful = results.filter((r) => r.success);
+  const failed = results.filter((r) => !r.success);
+
+  console.log(`\n=== RESULTS ===`);
+  console.log(`${successful.length} succeeded, ${failed.length} failed\n`);
+
+  if (successful.length > 0) {
+    console.log("✅ SUCCESSFUL DECODERS:");
+    successful.forEach((result) => {
+      console.log(`  ${result.decoder}`);
+      // Show first few lines of output, truncated if too long
+      const output = result.result.split("\n")[0];
+      const truncated =
+        output.length > 100 ? output.substring(0, 100) + "..." : output;
+      console.log(`    → ${truncated}`);
+    });
+    console.log("");
+  }
+
+  if (failed.length > 0) {
+    console.log("❌ FAILED DECODERS:");
+    failed.forEach((result) => {
+      console.log(`  ${result.decoder}`);
+    });
+  }
+
+  // Exit with success if any decoder succeeded, failure if all failed
+  process.exit(successful.length > 0 ? 0 : 1);
 }
 
 // Try to patch the original module (if decoder isn't exported)
