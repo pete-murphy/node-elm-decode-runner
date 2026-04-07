@@ -26,7 +26,7 @@
     }: {
       default = pkgs.buildNpmPackage {
         pname = "elm-decode-runner";
-        version = "0.3.0";
+        version = "0.5.0";
 
         src = ./.;
 
