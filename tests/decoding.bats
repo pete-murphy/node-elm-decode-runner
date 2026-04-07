@@ -268,6 +268,21 @@ EOF
   [ -z "$output" ]
 }
 
+# ----------------------------
+# Successful Decoding - Unexported decoder with variant export in exposing list
+# ----------------------------
+@test "decodes valid JSON with unexported decoder when exposing list has variant exports" {
+  cd "$TEST_RUN_DIR/elm_project_valid_not_exported_variant_export"
+
+  run bash -c "cat ../json_inputs/valid_for_foo.json | node $CLI_PATH Decoders.fooDecoder"
+  echo "# DEBUG: Test output: $output"
+  echo "# DEBUG: Test status: $status"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "name" ]]
+  [[ "$output" =~ "age" ]]
+}
+
 @test "fails with --discover when not in Elm project" {
   cd "$TEST_RUN_DIR/not_an_elm_project"
 
